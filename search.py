@@ -4,17 +4,69 @@ import pathlib
 import os
 import argparse
 
-SEARCH_TERMS=["created_at", "updated_at", "deleted_at"]
-EXCEPTIONS = [".git", ".github", ".husky", "data", "migrations", "diagrams", "docker", "fixture", "node_modules", "vendor", "storage"]
-ROOT_DIR_STR = ""
+class SearchToMd:
+    def __init__(self,
+                 root_dir,
+                 output_file, 
+                 search_terms = ["created_at", "updated_at", "deleted_at"], 
+                 exceptions = [".git", ".github", ".husky", "data", "migrations", "diagrams", "docker", "fixture", "node_modules", "vendor", "storage"],
+                 open = False):
+        self.root_dir = root_dir
+        self.output_file = output_file
+        self.search_terms = search_terms
+        self.exceptions = exceptions
+        self.open = open
 
-def dirpath_to_md(dirpath_str, counter, f):
-    global ROOT_DIR_STR
-    dirpath_str = re.sub(ROOT_DIR_STR, "", dirpath_str)
-    f.write(f"<details open>\n<summary><b>{dirpath_str} ({counter})</b></summary>\n\n")
+        self.output_file.write(f"# Searching in {self.root_dir.name}/\n\n")
 
-def filename_to_mid(filename_str, f):
-    f.write(f" - {filename_str}\n")
+        self.output_file.write(f"## Searching terms\n")
+        for term in self.search_terms:
+            self.output_file.write(f" - {term}\n")
+
+        
+        self.output_file.write("## Ignored directories\n")
+        for exception in self.exceptions:
+            self.output_file.write(f" - {exception}\n")
+
+        for term in self.search_terms:
+            self.output_file.write(f"# {term}\n\n")
+            self.parse_files(self.root_dir, term, self.output_file)
+            self.output_file.write("\n")
+
+    def dirpath_to_md(self, dirpath_str, counter, f):
+        dirpath_str = re.sub(str(self.root_dir), "", dirpath_str)
+        open = "open" if self.open else ""
+        f.write(f"<details {open}>\n<summary><b>{dirpath_str} ({counter})</b></summary>\n\n")
+
+    def filename_to_mid(self, filename_str, f):
+        f.write(f" - {filename_str}\n")
+
+
+    def parse_files(self, root_dir, term, f):
+        for child in os.scandir(root_dir):
+            if child.name in self.exceptions:
+                continue
+            if child.is_dir():
+                self.parse_files(child.path, term, f)
+            else:
+                try:
+                    lines_string = ""
+                    counter = 0
+                    file = open(child.path, "r")
+                    for i, line in enumerate(file):
+                        if re.search(term, line):
+                            # dirpath_to_md(child.path, f)
+                            line = re.sub(r"^\s+|\s+$", "", line)
+                            lines_string += f" - Line {i}: `{line}`\n"
+                            # print(f"{i}: {line}")
+                            counter += 1
+                    if lines_string:
+                        self.dirpath_to_md(child.path, counter, f)
+                        f.write(f"{lines_string}\n</details>\n\n")
+                    file.close()
+
+                except UnicodeDecodeError:
+                    pass
 
 # Checks if input is a valid directory and converts to posix.path
 def abs_path_check(string_input):
@@ -23,59 +75,16 @@ def abs_path_check(string_input):
     else:
         raise NotADirectoryError(string_input)
 
-def parse_files(root_dir, term, f):
-    for child in os.scandir(root_dir):
-        if child.name in EXCEPTIONS:
-            continue
-        if child.is_dir():
-            parse_files(child.path, term, f)
-        else:
-            try:
-                lines_string = ""
-                counter = 0
-                file = open(child.path, "r")
-                for i, line in enumerate(file):
-                    if re.search(term, line):
-                        # dirpath_to_md(child.path, f)
-                        line = re.sub(r"^\s+|\s+$", "", line)
-                        lines_string += f" - Line {i}: `{line}`\n"
-                        # print(f"{i}: {line}")
-                        counter += 1
-                if lines_string:
-                    dirpath_to_md(child.path, counter, f)
-                    f.write(f"{lines_string}\n</details>\n\n")
-                file.close()
-
-            except UnicodeDecodeError:
-                pass
-
-
-
 def driver(*args, **kwargs):
     parser = argparse.ArgumentParser(description = "Find matching string in directory/files and output where they're found into markdown")
     parser.add_argument(dest = 'path', type = abs_path_check)
+    parser.add_argument("--open", dest = 'open', action = 'store_true')
     
     args = parser.parse_args()
 
     f = open(r'TEST.md', 'w+')
 
-    global ROOT_DIR_STR
-    ROOT_DIR_STR = str(args.path)
-
-    f.write(f"# Searching in {args.path.name}/\n\n")
-
-    f.write(f"## Searching terms\n")
-    for term in SEARCH_TERMS:
-        f.write(f" - {term}\n")
-
-    f.write("## Ignored directories\n")
-    for exception in EXCEPTIONS:
-        f.write(f" - {exception}\n")
-
-    for term in SEARCH_TERMS:
-        f.write(f"# {term}\n\n")
-        parse_files(args.path, term, f)
-        f.write("\n")
+    search_output = SearchToMd(args.path, f, open = args.open)
 
     f.close()
 
