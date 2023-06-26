@@ -17,23 +17,25 @@ class SearchToMd:
         self.exceptions = exceptions
         self.open = open
 
-        print(self.search_terms)
-
         self.output_file.write(f"# Searching in {self.root_dir.name}/\n\n")
 
-        self.output_file.write(f"## Searching terms\n")
+        self.output_file.write(f"## Search terms\n")
         for term in self.search_terms:
-            self.output_file.write(f" - {term}\n")
+            if term:
+                self.output_file.write(f" - {term}\n")
 
         
-        self.output_file.write("## Ignored directories\n")
+        self.output_file.write("\n## Ignored directories\n")
         for exception in self.exceptions:
-            self.output_file.write(f" - {exception}\n")
+            if exception:
+                self.output_file.write(f" - {exception}\n")
+        self.output_file.write("\n")
 
         for term in self.search_terms:
-            self.output_file.write(f"# {term}\n\n")
-            self.parse_files(self.root_dir, term, self.output_file)
-            self.output_file.write("\n")
+            if term:
+                self.output_file.write(f"# {term}\n\n")
+                self.parse_files(self.root_dir, term, self.output_file)
+                self.output_file.write("\n")
 
         self.output_file.close()
 
@@ -41,9 +43,6 @@ class SearchToMd:
         dirpath_str = re.sub(str(self.root_dir), "", dirpath_str)
         open = "open" if self.open else ""
         f.write(f"<details {open}>\n<summary><b>{dirpath_str} ({counter})</b></summary>\n\n")
-
-    def filename_to_mid(self, filename_str, f):
-        f.write(f" - {filename_str}\n")
 
     def parse_files(self, root_dir, term, f):
         for child in os.scandir(root_dir):
@@ -58,10 +57,8 @@ class SearchToMd:
                     file = open(child.path, "r")
                     for i, line in enumerate(file):
                         if re.search(term, line):
-                            # dirpath_to_md(child.path, f)
                             line = re.sub(r"^\s+|\s+$", "", line)
                             lines_string += f" - Line {i}: `{line}`\n"
-                            # print(f"{i}: {line}")
                             counter += 1
                     if lines_string:
                         self.dirpath_to_md(child.path, counter, f)
@@ -71,34 +68,91 @@ class SearchToMd:
                 except UnicodeDecodeError:
                     pass
 
-# Checks if input is a valid directory and converts to posix.path
-def abs_path_check(string_input):
+"""
+Checks if input is a valid directory and converts to posix.path
+
+Parameters
+----------
+string_input : str
+    string of path to repo directory
+
+Returns
+-------
+Posix.Path.absolute() object
+    Return the absolute posix path
+
+Raises
+------
+    NotADirectory : If string input is not a valid dir
+"""
+def abs_path_check(string_input : str):
     if os.path.isdir(string_input):
         return pathlib.Path(string_input).absolute()
     else:
         raise NotADirectoryError(string_input)
-    
-def return_file(string_input):
+
+"""
+Creates a results fodler in current working directory if not present
+If user provides no output file format, then defaults to
+    results/Results-{time.year}-{time.month}-{time.day}-{time.hour}:{time.minute}:{time.second}.md
+Otherwise will check to see if file format has .md extension or not, add is not, then set to user output file
+
+Parameters
+----------
+string_input : str
+    string of file name to save to
+
+Returns
+-------
+TextIOWrapper
+    Opens newly created file
+
+"""
+def return_file(string_input : str):
+    # Creates 'results' directory in current working directory
     os.makedirs(f"{os.getcwd()}/results", exist_ok = True)
+
+    # Saves path string
     output_dir = f"{os.getcwd()}/results"
+
+    # If user provides custom output file
     if string_input:
+        # Replace any slashes
         string_input = re.sub(r"/","-", string_input)
+
+        # Add '.md' if not prensent
+        # Return IO Wrapper document in open positions
         if re.findall(r".md$", string_input):
             return open(f"{output_dir}/{string_input}", "w+")
         else:
             return open(f"{output_dir}/{string_input}.md", "w+")
+        
+    # Returns IOWrapper object with default file name convection
     else:
         time = datetime.datetime.now()
         filename = f"Results-{time.year}-{time.month}-{time.day}-{time.hour}:{time.minute}:{time.second}.md"
         return open(f"{output_dir}/{filename}", "w+")
 
 def driver(*args, **kwargs):
-    parser = argparse.ArgumentParser(description = "Find matching string in directory/files and output where they're found into markdown")
+    parser = argparse.ArgumentParser(description =
+    "Find matching string/terms in directory/files and output where they're found into markdown file")
     parser.add_argument(dest = 'path', type = abs_path_check)
-    parser.add_argument(dest = "terms", type = open, nargs = "?")
-    parser.add_argument(dest = "exceptions", type = open, nargs = "?")
-    parser.add_argument("--open", dest = 'open', action = 'store_true')
-    parser.add_argument("-o", "--output", dest = "output", type = return_file, default = "")
+
+    parser.add_argument(dest = "terms", type = open, nargs = "?", help = """
+    Input file for search terms. Defaults to 'terms.txt' in root directory.
+    """)
+
+    parser.add_argument(dest = "exceptions", type = open, nargs = "?", help = """
+    Input file for directories to skip over. Defaults to 'exceptions.txt' in root directory.
+    """)
+
+    parser.add_argument("--open", dest = 'open', action = 'store_true', help = """
+    Display collapsable results as open, showing all occurances by default.
+    """)
+
+    parser.add_argument("-o", "--output", dest = "output", type = return_file, default = "", help = """
+    Custom output file name. Will output in results folder.
+    """)
     
     args = parser.parse_args()
 
