@@ -6,13 +6,12 @@ import argparse
 
 REG_EX=r"created_at"
 exceptions = [".git", ".github", ".husky", "data", "migrations", "diagrams", "docker", "fixture", "node_modules", "vendor", "storage"]
-counter = 0
 root_dir_str = ""
 
-def dirpath_to_md(dirpath_str, f):
+def dirpath_to_md(dirpath_str, counter, f):
     global root_dir_str
     dirpath_str = re.sub(root_dir_str, "", dirpath_str)
-    f.write(f"### {dirpath_str}\n\n")
+    f.write(f"<details>\n<summary><b>{dirpath_str} ({counter})</b></summary>\n\n")
 
 def filename_to_mid(filename_str, f):
     f.write(f" - {filename_str}\n")
@@ -35,20 +34,19 @@ def parse_files(root_dir, f):
         else:
             # print("- File: ", child.path)
             try:
-                found = False
                 lines_string = ""
+                counter = 0
                 file = open(child.path, "r")
                 for i, line in enumerate(file):
                     if re.search(REG_EX, line):
-                        found = True
                         # dirpath_to_md(child.path, f)
+                        line = re.sub(r"^\s+|\s+$", "", line)
                         lines_string += f" - Line {i}: `{line}`\n"
                         # print(f"{i}: {line}")
-                        global counter
                         counter += 1
-                if found:
-                    dirpath_to_md(child.path, f)
-                    f.write(lines_string)
+                if lines_string:
+                    dirpath_to_md(child.path, counter, f)
+                    f.write(f"{lines_string}\n</details>\n")
 
             except UnicodeDecodeError:
                 pass
@@ -68,8 +66,6 @@ def driver(*args, **kwargs):
     print(root_dir_str)
 
     parse_files(args.path, f)
-
-    print(counter)
 
     f.close()
 
