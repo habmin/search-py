@@ -5,7 +5,17 @@ import os
 import argparse
 
 REG_EX=r"created_at"
-exceptions = [".git", "data", "migrations", "diagrams", "docker", "fixture", "node_modules", "vendor", "storage"]
+exceptions = [".git", ".github", ".husky", "data", "migrations", "diagrams", "docker", "fixture", "node_modules", "vendor", "storage"]
+counter = 0
+root_dir_str = ""
+
+def dirpath_to_md(dirpath_str, f):
+    global root_dir_str
+    dirpath_str = re.sub(root_dir_str, "", dirpath_str)
+    f.write(f"### {dirpath_str}\n\n")
+
+def filename_to_mid(filename_str, f):
+    f.write(f" - {filename_str}\n")
 
 # Checks if input is a valid directory and converts to posix.path
 def abs_path_check(string_input):
@@ -14,21 +24,32 @@ def abs_path_check(string_input):
     else:
         raise NotADirectoryError(string_input)
 
-def parse_files(root_dir):
+def parse_files(root_dir, f):
     for child in os.scandir(root_dir):
         if child.name in exceptions:
             continue
         if child.is_dir():
+            # dirpath_to_md(f"{child.path}", f)
             # print(indent, "* Dirc: ", child.path)
-            parse_files(child.path)
+            parse_files(child.path, f)
         else:
             # print("- File: ", child.path)
             try:
+                found = False
+                lines_string = ""
                 file = open(child.path, "r")
                 for i, line in enumerate(file):
                     if re.search(REG_EX, line):
-                        print(f"In file {child.path}")
-                        print(f"{i}: {line}")
+                        found = True
+                        # dirpath_to_md(child.path, f)
+                        lines_string += f" - Line {i}: `{line}`\n"
+                        # print(f"{i}: {line}")
+                        global counter
+                        counter += 1
+                if found:
+                    dirpath_to_md(child.path, f)
+                    f.write(lines_string)
+
             except UnicodeDecodeError:
                 pass
 
@@ -40,7 +61,17 @@ def driver(*args, **kwargs):
     
     args = parser.parse_args()
 
-    parse_files(args.path)
+    f = open(r'TEST.md', 'w+')
+
+    global root_dir_str
+    root_dir_str = str(args.path)
+    print(root_dir_str)
+
+    parse_files(args.path, f)
+
+    print(counter)
+
+    f.close()
 
 if __name__ == '__main__':
     driver(*sys.argv)
