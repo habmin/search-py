@@ -3,7 +3,7 @@ import sys
 import pathlib
 import os
 import argparse
-
+import datetime
 class SearchToMd:
     def __init__(self,
                  root_dir,
@@ -33,6 +33,8 @@ class SearchToMd:
             self.parse_files(self.root_dir, term, self.output_file)
             self.output_file.write("\n")
 
+        self.output_file.close()
+
     def dirpath_to_md(self, dirpath_str, counter, f):
         dirpath_str = re.sub(str(self.root_dir), "", dirpath_str)
         open = "open" if self.open else ""
@@ -40,7 +42,6 @@ class SearchToMd:
 
     def filename_to_mid(self, filename_str, f):
         f.write(f" - {filename_str}\n")
-
 
     def parse_files(self, root_dir, term, f):
         for child in os.scandir(root_dir):
@@ -74,19 +75,30 @@ def abs_path_check(string_input):
         return pathlib.Path(string_input).absolute()
     else:
         raise NotADirectoryError(string_input)
+    
+def return_file(string_input):
+    os.makedirs(f"{os.getcwd()}/results", exist_ok = True)
+    output_dir = f"{os.getcwd()}/results"
+    if string_input:
+        string_input = re.sub(r"/","-", string_input)
+        if re.findall(r".md$", string_input):
+            return open(f"{output_dir}/{string_input}", "w+")
+        else:
+            return open(f"{output_dir}/{string_input}.md", "w+")
+    else:
+        time = datetime.datetime.now()
+        filename = f"Results-{time.year}-{time.month}-{time.day}-{time.hour}:{time.minute}:{time.second}.md"
+        return open(f"{output_dir}/results/{filename}", "w+")
 
 def driver(*args, **kwargs):
     parser = argparse.ArgumentParser(description = "Find matching string in directory/files and output where they're found into markdown")
     parser.add_argument(dest = 'path', type = abs_path_check)
     parser.add_argument("--open", dest = 'open', action = 'store_true')
+    parser.add_argument("-o", "--output", dest = "output", type = return_file, default = "")
     
     args = parser.parse_args()
 
-    f = open(r'TEST.md', 'w+')
-
-    search_output = SearchToMd(args.path, f, open = args.open)
-
-    f.close()
+    SearchToMd(args.path, args.output, open = args.open)
 
 if __name__ == '__main__':
     driver(*sys.argv)
