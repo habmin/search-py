@@ -4,14 +4,14 @@ import pathlib
 import os
 import argparse
 
-REG_EX=r"created_at"
-exceptions = [".git", ".github", ".husky", "data", "migrations", "diagrams", "docker", "fixture", "node_modules", "vendor", "storage"]
-root_dir_str = ""
+SEARCH_TERMS=["created_at", "updated_at", "deleted_at"]
+EXCEPTIONS = [".git", ".github", ".husky", "data", "migrations", "diagrams", "docker", "fixture", "node_modules", "vendor", "storage"]
+ROOT_DIR_STR = ""
 
 def dirpath_to_md(dirpath_str, counter, f):
-    global root_dir_str
-    dirpath_str = re.sub(root_dir_str, "", dirpath_str)
-    f.write(f"<details>\n<summary><b>{dirpath_str} ({counter})</b></summary>\n\n")
+    global ROOT_DIR_STR
+    dirpath_str = re.sub(ROOT_DIR_STR, "", dirpath_str)
+    f.write(f"<details open>\n<summary><b>{dirpath_str} ({counter})</b></summary>\n\n")
 
 def filename_to_mid(filename_str, f):
     f.write(f" - {filename_str}\n")
@@ -23,22 +23,19 @@ def abs_path_check(string_input):
     else:
         raise NotADirectoryError(string_input)
 
-def parse_files(root_dir, f):
+def parse_files(root_dir, term, f):
     for child in os.scandir(root_dir):
-        if child.name in exceptions:
+        if child.name in EXCEPTIONS:
             continue
         if child.is_dir():
-            # dirpath_to_md(f"{child.path}", f)
-            # print(indent, "* Dirc: ", child.path)
-            parse_files(child.path, f)
+            parse_files(child.path, term, f)
         else:
-            # print("- File: ", child.path)
             try:
                 lines_string = ""
                 counter = 0
                 file = open(child.path, "r")
                 for i, line in enumerate(file):
-                    if re.search(REG_EX, line):
+                    if re.search(term, line):
                         # dirpath_to_md(child.path, f)
                         line = re.sub(r"^\s+|\s+$", "", line)
                         lines_string += f" - Line {i}: `{line}`\n"
@@ -46,7 +43,8 @@ def parse_files(root_dir, f):
                         counter += 1
                 if lines_string:
                     dirpath_to_md(child.path, counter, f)
-                    f.write(f"{lines_string}\n</details>\n")
+                    f.write(f"{lines_string}\n</details>\n\n")
+                file.close()
 
             except UnicodeDecodeError:
                 pass
@@ -61,11 +59,23 @@ def driver(*args, **kwargs):
 
     f = open(r'TEST.md', 'w+')
 
-    global root_dir_str
-    root_dir_str = str(args.path)
-    print(root_dir_str)
+    global ROOT_DIR_STR
+    ROOT_DIR_STR = str(args.path)
 
-    parse_files(args.path, f)
+    f.write(f"# Searching in {args.path.name}/\n\n")
+
+    f.write(f"## Searching terms\n")
+    for term in SEARCH_TERMS:
+        f.write(f" - {term}\n")
+
+    f.write("## Ignored directories\n")
+    for exception in EXCEPTIONS:
+        f.write(f" - {exception}\n")
+
+    for term in SEARCH_TERMS:
+        f.write(f"# {term}\n\n")
+        parse_files(args.path, term, f)
+        f.write("\n")
 
     f.close()
 
