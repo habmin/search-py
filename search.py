@@ -8,14 +8,16 @@ class SearchToMd:
     def __init__(self,
                  root_dir,
                  output_file, 
-                 search_terms = ["created_at", "updated_at", "deleted_at"], 
-                 exceptions = [".git", ".github", ".husky", "data", "migrations", "diagrams", "docker", "fixture", "node_modules", "vendor", "storage"],
+                 search_terms, 
+                 exceptions,
                  open = False):
         self.root_dir = root_dir
         self.output_file = output_file
         self.search_terms = search_terms
         self.exceptions = exceptions
         self.open = open
+
+        print(self.search_terms)
 
         self.output_file.write(f"# Searching in {self.root_dir.name}/\n\n")
 
@@ -88,17 +90,28 @@ def return_file(string_input):
     else:
         time = datetime.datetime.now()
         filename = f"Results-{time.year}-{time.month}-{time.day}-{time.hour}:{time.minute}:{time.second}.md"
-        return open(f"{output_dir}/results/{filename}", "w+")
+        return open(f"{output_dir}/{filename}", "w+")
 
 def driver(*args, **kwargs):
     parser = argparse.ArgumentParser(description = "Find matching string in directory/files and output where they're found into markdown")
     parser.add_argument(dest = 'path', type = abs_path_check)
+    parser.add_argument(dest = "terms", type = open, nargs = "?")
+    parser.add_argument(dest = "exceptions", type = open, nargs = "?")
     parser.add_argument("--open", dest = 'open', action = 'store_true')
     parser.add_argument("-o", "--output", dest = "output", type = return_file, default = "")
     
     args = parser.parse_args()
 
-    SearchToMd(args.path, args.output, open = args.open)
+    if args.terms == None:
+        args.terms = open("terms.txt")
+    
+    if args.exceptions == None:
+        args.exceptions = open("exceptions.txt")
+
+    SearchToMd(args.path, args.output, search_terms = [term.rstrip() for term in args.terms], exceptions = [exception.rstrip() for exception in args.exceptions], open = args.open)
+    
+    args.terms.close()
+    args.exceptions.close()
 
 if __name__ == '__main__':
     driver(*sys.argv)
