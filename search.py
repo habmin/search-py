@@ -5,12 +5,14 @@ import os
 import argparse
 import datetime
 class SearchToMd:
-    def __init__(self,
-                 root_dir,
-                 output_file, 
-                 search_terms, 
-                 exceptions,
-                 open = False):
+    def __init__(
+        self,
+        root_dir,
+        output_file, 
+        search_terms, 
+        exceptions,
+        open = False):
+        
         self.root_dir = root_dir
         self.output_file = output_file
         self.search_terms = search_terms
@@ -68,47 +70,47 @@ class SearchToMd:
                 except UnicodeDecodeError:
                     pass
 
-"""
-Checks if input is a valid directory and converts to posix.path
-
-Parameters
-----------
-string_input : str
-    string of path to repo directory
-
-Returns
--------
-Posix.Path.absolute() object
-    Return the absolute posix path
-
-Raises
-------
-    NotADirectory : If string input is not a valid dir
-"""
 def abs_path_check(string_input : str):
+    """
+    Checks if input is a valid directory and converts to posix.path
+
+    Parameters
+    ----------
+    string_input : str
+        string of path to repo directory
+
+    Returns
+    -------
+    Posix.Path.absolute() object
+        Return the absolute posix path
+
+    Raises
+    ------
+        NotADirectory : If string input is not a valid dir
+    """
     if os.path.isdir(string_input):
         return pathlib.Path(string_input).absolute()
     else:
         raise NotADirectoryError(string_input)
 
-"""
-Creates a results fodler in current working directory if not present
-If user provides no output file format, then defaults to
-    results/Results-{time.year}-{time.month}-{time.day}-{time.hour}:{time.minute}:{time.second}.md
-Otherwise will check to see if file format has .md extension or not, add is not, then set to user output file
-
-Parameters
-----------
-string_input : str
-    string of file name to save to
-
-Returns
--------
-TextIOWrapper
-    Opens newly created file
-
-"""
 def return_file(string_input : str):
+    """
+    Creates a results fodler in current working directory if not present
+    If user provides no output file format, then defaults to
+        results/Results-{time.year}-{time.month}-{time.day}-{time.hour}:{time.minute}:{time.second}.md
+    Otherwise will check to see if file format has .md extension or not, add is not, then set to user output file
+
+    Parameters
+    ----------
+    string_input : str
+        string of file name to save to
+
+    Returns
+    -------
+    TextIOWrapper
+        Opens newly created file
+
+    """
     # Creates 'results' directory in current working directory
     os.makedirs(f"{os.getcwd()}/results", exist_ok = True)
 
