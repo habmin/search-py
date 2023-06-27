@@ -11,13 +11,15 @@ class SearchToMd:
         output_file, 
         search_terms, 
         exceptions,
-        open = False):
+        open = False,
+        checkbox = False):
         
         self.root_dir = root_dir
         self.output_file = output_file
         self.search_terms = search_terms
         self.exceptions = exceptions
         self.open = open
+        self.checkbox = checkbox
 
         self.output_file.write(f"# Searching in {self.root_dir.name}/\n\n")
 
@@ -60,7 +62,8 @@ class SearchToMd:
                     for i, line in enumerate(file):
                         if re.search(term, line):
                             line = re.sub(r"^\s+|\s+$", "", line)
-                            lines_string += f" - Line {i}: `{line}`\n"
+                            check = "[ ] "
+                            lines_string += f" - {check if self.checkbox else None}Line {i}: `{line}`\n"
                             counter += 1
                     if lines_string:
                         self.dirpath_to_md(child.path, counter, f)
@@ -156,6 +159,10 @@ def driver(*args, **kwargs):
     Custom output file name. Will output in results folder.
     """)
     
+    parser.add_argument("-c", '--checkbox', dest = "checkbox", action = 'store_true', help = """
+    Add check mark box for each line.
+    """)
+
     args = parser.parse_args()
 
     if args.terms == None:
@@ -164,7 +171,7 @@ def driver(*args, **kwargs):
     if args.exceptions == None:
         args.exceptions = open("exceptions.txt")
 
-    SearchToMd(args.path, args.output, search_terms = [term.rstrip() for term in args.terms], exceptions = [exception.rstrip() for exception in args.exceptions], open = args.open)
+    SearchToMd(args.path, args.output, search_terms = [term.rstrip() for term in args.terms], exceptions = [exception.rstrip() for exception in args.exceptions], open = args.open, checkbox = args.checkbox)
     
     args.terms.close()
     args.exceptions.close()
