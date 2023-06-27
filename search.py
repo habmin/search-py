@@ -62,8 +62,8 @@ class SearchToMd:
                     for i, line in enumerate(file):
                         if re.search(term, line):
                             line = re.sub(r"^\s+|\s+$", "", line)
-                            check = "[ ] "
-                            lines_string += f" - {check if self.checkbox else None}Line {i}: `{line}`\n"
+                            check = "[ ] " if self.checkbox else ""
+                            lines_string += f" - {check}Line {i}: `{line}`\n"
                             counter += 1
                     if lines_string:
                         self.dirpath_to_md(child.path, counter, f)
