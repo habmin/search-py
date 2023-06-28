@@ -12,6 +12,7 @@ Its use was designed to be used in repo projects, in order to help collobrate wi
 - Have drop down detail menu open or closed when creating the markdown.
 - Include checkboxs or not.
 - Custom output file name.
+- Include links to github repo at line locations
 
 ## How-to
 1. Clone/download repo or just `search.py`.

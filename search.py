@@ -11,6 +11,7 @@ class SearchToMd:
         output_file, 
         search_terms, 
         exceptions,
+        github,
         open = False,
         checkbox = False):
         
@@ -18,10 +19,13 @@ class SearchToMd:
         self.output_file = output_file
         self.search_terms = search_terms
         self.exceptions = exceptions
+        self.github = github
         self.open = open
         self.checkbox = checkbox
 
         self.output_file.write(f"# Searching in {self.root_dir.name}/\n\n")
+        if self.github:
+            self.output_file.write(f"## Linking to github repo {self.github.replace()}\n\n")
 
         self.output_file.write(f"## Search terms\n")
         for term in self.search_terms:
@@ -53,6 +57,7 @@ class SearchToMd:
             if child.name in self.exceptions:
                 continue
             if child.is_dir():
+                self.github = self.github + f"{child.name}/" if self.github else ""
                 self.parse_files(child.path, term, f)
             else:
                 try:
@@ -63,7 +68,10 @@ class SearchToMd:
                         if re.search(term, line):
                             line = re.sub(r"^\s+|\s+$", "", line)
                             check = "[ ] " if self.checkbox else ""
-                            lines_string += f" - {check}Line {i}: `{line}`\n"
+                            if self.github:
+                                lines_string += f" - [{check}Line {i + 1}: `{line}`]({self.github}{child.name}#L{i + 1})\n"
+                            else:
+                                lines_string += f" - {check}Line {i + 1}: `{line}`\n"                                
                             counter += 1
                     if lines_string:
                         self.dirpath_to_md(child.path, counter, f)
@@ -72,6 +80,7 @@ class SearchToMd:
 
                 except UnicodeDecodeError:
                     pass
+            self.github = self.github.replace(f"{child.name}/", "") if self.github else ""
 
 def abs_path_check(string_input : str):
     """
@@ -138,6 +147,14 @@ def return_file(string_input : str):
         filename = f"Results-{time.year}-{time.month}-{time.day}-{time.hour}:{time.minute}:{time.second}.md"
         return open(f"{output_dir}/{filename}", "w+")
 
+def github_parse(string_input):
+    if string_input:
+        arguments = string_input.split("|")
+        print(arguments)
+        return f"https://{arguments[1]}/blob/{arguments[0]}/"
+    else:
+        return ""
+
 def driver(*args, **kwargs):
     parser = argparse.ArgumentParser(description =
     "Find matching string/terms in directory/files and output where they're found into markdown file")
@@ -163,6 +180,11 @@ def driver(*args, **kwargs):
     Add check mark box for each line.
     """)
 
+    parser.add_argument("-g", "--github", dest = "gitref", type = github_parse, default = "", help = """
+    Provide a link to a github repo with branch to insert links
+    Argument should be wrriten as "<branch-name>|<ref to github repo>"
+    """)
+
     args = parser.parse_args()
 
     if args.terms == None:
@@ -171,7 +193,7 @@ def driver(*args, **kwargs):
     if args.exceptions == None:
         args.exceptions = open("exceptions.txt")
 
-    SearchToMd(args.path, args.output, search_terms = [term.rstrip() for term in args.terms], exceptions = [exception.rstrip() for exception in args.exceptions], open = args.open, checkbox = args.checkbox)
+    SearchToMd(args.path, args.output, search_terms = [term.rstrip() for term in args.terms], exceptions = [exception.rstrip() for exception in args.exceptions], open = args.open, checkbox = args.checkbox, github = args.gitref)
     
     args.terms.close()
     args.exceptions.close()
